@@ -99,11 +99,15 @@ export default function KokenPage() {
 
   function startTimer(step: RecipeStep) {
     if (!step.heeft_timer || !step.timer) return
+    // Robuste extractie: AI kan meerdere veldnamen gebruiken
+    const t = step.timer as Record<string, unknown>
+    const rawDuur = t.duur_seconden ?? t.duration ?? t.seconds ?? t.duur ?? t.tijdsduur ?? t.tijd_seconden ?? 0
+    const duurSec = Math.max(10, Number(rawDuur) || 120)
     const newTimer: Timer = {
       id: `${Date.now()}`,
       componentNaam: step.timer.component_naam,
-      duurSeconden: Math.max(1, Number(step.timer.duur_seconden) || 60),
-      resterendSeconden: Math.max(1, Number(step.timer.duur_seconden) || 60),
+      duurSeconden: duurSec,
+      resterendSeconden: duurSec,
       type: step.timer.type as Timer['type'],
       actief: true, voltooid: false,
     }

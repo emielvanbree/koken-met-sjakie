@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [{
         role: 'user',
         content: `Genereer een volledig recept voor "<user_input>${dishName}</user_input>" voor ${servings} personen (kokniveau ${userLevel}/5).
@@ -61,10 +61,16 @@ Geef ALLEEN een geldig JSON object terug, geen uitleg:
   "porties": number,
   "keuken_type": "string",
   "ingredienten": [{"naam": "string", "hoeveelheid": number, "eenheid": "string", "winkel_sectie": "string", "is_substituut": false}],
-  "stappen": [{"stap_nummer": number, "instructie": "string", "ingredienten_deze_stap": [], "heeft_timer": false, "timer": null, "techniek_uitleg": null, "proactieve_tip": null}],
+  "stappen": [
+    {"stap_nummer": 1, "instructie": "string", "ingredienten_deze_stap": [], "heeft_timer": false, "timer": null, "techniek_uitleg": null, "proactieve_tip": null},
+    {"stap_nummer": 2, "instructie": "string", "ingredienten_deze_stap": [], "heeft_timer": true, "timer": {"duur_seconden": 600, "component_naam": "string", "type": "koken"}, "techniek_uitleg": null, "proactieve_tip": null}
+  ],
   "chef_tip": "string",
   "badges_mogelijk": []
-}`
+}
+Regels:
+- timer.duur_seconden MOET een positief integer zijn in seconden (bijv. 300 = 5 min, 600 = 10 min, 1800 = 30 min)
+- timer is null wanneer heeft_timer false is`
       }]
     })
     const text = message.content[0].type === 'text' ? message.content[0].text : ''
