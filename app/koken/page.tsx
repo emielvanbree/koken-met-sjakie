@@ -50,7 +50,7 @@ export default function KokenPage() {
             `${i.hoeveelheid > 0 ? `${i.hoeveelheid} ${i.eenheid} ` : ''}${i.naam}`
           ),
           heeft_timer: false,
-          timer: null,
+          timer: undefined,
           techniek_uitleg: null,
           proactieve_tip: { type: 'techniek', tekst: 'Leg alles klaar voordat je begint — dat maakt het koken veel rustiger.' },
         }
