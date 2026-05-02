@@ -480,6 +480,40 @@ export default function KokenPage() {
           </div>
         </div>
       )}
+
+      {/* Voice Modal */}
+      {voiceModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}>
+          <div style={{ background: 'white', width: '100%', borderRadius: '20px 20px 0 0', padding: '24px 20px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h2 style={{ fontWeight: 800, fontSize: 18, color: 'var(--kms-dark)', marginBottom: 4 }}>🔊 Stem instellen</h2>
+            <p style={{ color: '#888', fontSize: 14, marginBottom: 16 }}>Kies een stem voor de gesproken instructies.</p>
+            {availableVoices.filter(v => v.lang.startsWith('nl')).length === 0 && (
+              <div style={{ background: '#FFF8E1', border: '1px solid #FFD54F', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                <p style={{ fontSize: 13, color: '#795548', margin: 0, fontWeight: 600 }}>⚠️ Geen Nederlandse stem gevonden</p>
+                <p style={{ fontSize: 12, color: '#795548', margin: '4px 0 0' }}>Ga naar Instellingen → Toegankelijkheid → Tekst naar spraak en download een Nederlandse stem (bijv. Google NL).</p>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+              <button
+                onClick={() => { localStorage.removeItem('kms-preferred-voice'); setSelectedVoiceName(''); setVoiceModalOpen(false); }}
+                style={{ padding: '12px 16px', borderRadius: 10, border: selectedVoiceName === '' ? '2px solid var(--kms-orange)' : '1.5px solid #E0E0E0', background: selectedVoiceName === '' ? '#FFF3EE' : 'white', fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'left' }}>
+                🤖 Automatisch (aanbevolen)
+              </button>
+              {availableVoices.map(v => (
+                <button key={v.name}
+                  onClick={() => { localStorage.setItem('kms-preferred-voice', v.name); setSelectedVoiceName(v.name); setVoiceModalOpen(false); }}
+                  style={{ padding: '12px 16px', borderRadius: 10, border: selectedVoiceName === v.name ? '2px solid var(--kms-orange)' : '1.5px solid #E0E0E0', background: selectedVoiceName === v.name ? '#FFF3EE' : 'white', fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{v.name}</span>
+                  <span style={{ fontSize: 12, color: v.lang.startsWith('nl') ? '#2D6A4F' : '#999', fontWeight: v.lang.startsWith('nl') ? 700 : 400 }}>{v.lang.startsWith('nl') ? '🇳🇱 NL' : v.lang}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setVoiceModalOpen(false)} style={{ width: '100%', padding: '14px', border: 'none', background: '#F5F5F5', borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: 'pointer', color: '#555' }}>
+              Sluiten
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

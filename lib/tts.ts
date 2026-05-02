@@ -50,8 +50,9 @@ export function getBestVoice(): SpeechSynthesisVoice | null {
   const dutch = voices.find(v => v.lang.startsWith('nl'))
   if (dutch) return dutch
 
-  // Fallback: beste beschikbare stem
-  return voices[0] || null
+  // Geen Nederlandse stem gevonden: geef null terug zodat utt.lang het stuurt
+  // (beter dan een Engelstalige stem forceren)
+  return null
 }
 
 /** Spreekt tekst uit met de beste of opgeslagen stem */
