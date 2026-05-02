@@ -213,6 +213,11 @@ export default function VandaagPage() {
     setStep('ingredients')
   }
 
+  function handleSavedRecipeStart(entry: {id: string; name: string; recipe: Recipe}) {
+    sessionStorage.setItem('kms-active-recipe', JSON.stringify(entry.recipe))
+    router.push('/koken')
+  }
+
   function saveToStorage(recipes: {id: string; name: string; recipe: Recipe}[]) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)) } catch { /* stil */ }
   }
