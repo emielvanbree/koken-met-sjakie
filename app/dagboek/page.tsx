@@ -126,7 +126,7 @@ export default function DagboekPage() {
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {entry.emoji && <span style={{ fontSize: 24 }}>{entry.emoji}</span>}
-                <button onClick={() => handleRestart(entry)} disabled={restarting === entry.id}
+                <button onClick={() => herhaalGerecht(entry)} disabled={restarting === entry.id}
                   style={{ background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   {restarting === entry.id ? '⏳' : '🔄'}
                 </button>
