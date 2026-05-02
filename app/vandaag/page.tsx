@@ -315,13 +315,11 @@ export default function VandaagPage() {
                         flex: 1, background: 'none', border: 'none', textAlign: 'left',
                         cursor: 'pointer', padding: 0,
                       }}>
-                        <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--kms-dark)', margin: '0 0 2px' }}>
-                          {entry.name}
-                        </p>
+                        <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--kms-dark)', margin: '0 0 2px' }}>{entry.name}</p>
                         <p style={{ fontSize: 12, color: '#888', margin: 0 }}>
                           {entry.recipe.bereidingstijd} min · {'⭐'.repeat(entry.recipe.moeilijkheid)}
                         </p>
-                      </div>
+                      </button>
                       <button onClick={() => handleSavedRecipeStart(entry)}
                         style={{ background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         Kook dit →
@@ -331,9 +329,228 @@ export default function VandaagPage() {
                 </div>
               </div>
             )}
+
+            {/* Mood */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--kms-dark)', marginBottom: 10 }}>Wat heb je zin in?</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {MOOD_OPTIONS.map(m => (
+                  <button key={m} onClick={() => setMood(m === mood ? '' : m)}
+                    style={{ padding: '8px 14px', borderRadius: 20, border: '2px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      borderColor: mood === m ? 'var(--kms-orange)' : '#E0E0E0',
+                      background: mood === m ? 'var(--kms-orange)' : 'white',
+                      color: mood === m ? 'white' : 'var(--kms-dark)' }}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tijd */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--kms-dark)', marginBottom: 10 }}>Hoeveel tijd heb je?</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {TIME_OPTIONS.map(t => (
+                  <button key={t} onClick={() => setTijd(t === tijd ? '' : t)}
+                    style={{ padding: '8px 14px', borderRadius: 20, border: '2px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      borderColor: tijd === t ? 'var(--kms-orange)' : '#E0E0E0',
+                      background: tijd === t ? 'var(--kms-orange)' : 'white',
+                      color: tijd === t ? 'white' : 'var(--kms-dark)' }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Personen */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--kms-dark)', marginBottom: 10 }}>Voor hoeveel personen?</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {PERSONS_OPTIONS.map(p => (
+                  <button key={p} onClick={() => setPersonen(p === personen ? '' : p)}
+                    style={{ padding: '8px 14px', borderRadius: 20, border: '2px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      borderColor: personen === p ? 'var(--kms-orange)' : '#E0E0E0',
+                      background: personen === p ? 'var(--kms-orange)' : 'white',
+                      color: personen === p ? 'white' : 'var(--kms-dark)' }}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Keuken */}
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--kms-dark)', marginBottom: 10 }}>Keuken voorkeur?</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {CUISINE_OPTIONS.map(c => (
+                  <button key={c} onClick={() => setKeuken(c === keuken ? '' : c)}
+                    style={{ padding: '8px 14px', borderRadius: 20, border: '2px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      borderColor: keuken === c ? 'var(--kms-orange)' : '#E0E0E0',
+                      background: keuken === c ? 'var(--kms-orange)' : 'white',
+                      color: keuken === c ? 'white' : 'var(--kms-dark)' }}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {error && <p style={{ color: 'red', marginBottom: 12, fontSize: 14 }}>{error}</p>}
+
+            <button onClick={fetchSuggestions} disabled={loading || (!mood && !tijd && !personen && !keuken)}
+              style={{ width: '100%', padding: '16px', background: 'var(--kms-orange)', color: 'white', border: 'none',
+                borderRadius: 14, fontSize: 16, fontWeight: 800, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
+              {loading ? '⏳ Recepten ophalen...' : '✨ Geef me receptideeën!'}
+            </button>
+          </>
+        )}
+
+        {/* ── SUGGESTIES ── */}
+        {step === 'suggestions' && (
+          <>
+            <button onClick={() => setStep('checkin')} style={{ background: 'none', border: 'none', color: 'var(--kms-orange)', fontWeight: 700, cursor: 'pointer', marginBottom: 16, fontSize: 15 }}>
+              ← Terug
+            </button>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--kms-dark)', marginBottom: 16 }}>🍽️ Jouw receptideeën</h2>
+            {error && <p style={{ color: 'red', marginBottom: 12 }}>{error}</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {suggestions.map((s, i) => (
+                <button key={i} onClick={() => selectSuggestion(s)}
+                  style={{ background: 'white', border: '2px solid #F0F0F0', borderRadius: 16, padding: '16px', textAlign: 'left', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                    <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--kms-dark)' }}>{CUISINE_EMOJI[s.keuken_type] || '🍽️'} {s.naam}</span>
+                    <span style={{ fontSize: 12, color: '#888' }}>{s.bereidingstijd} min</span>
+                  </div>
+                  <p style={{ margin: '0 0 8px', fontSize: 13, color: '#666' }}>{s.waarom_dit_past}</p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, background: '#FFF3EE', color: 'var(--kms-orange)', padding: '3px 8px', borderRadius: 10, fontWeight: 600 }}>{stars(s.moeilijkheid)}</span>
+                    {s.top_ingredienten.slice(0, 3).map(ing => (
+                      <span key={ing} style={{ fontSize: 12, background: '#F5F5F5', color: '#555', padding: '3px 8px', borderRadius: 10 }}>{ing}</span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── LOADING RECEPT ── */}
+        {(step === 'loading-recipe' || step === 'loading-subs' || step === 'loading-adjusted') && (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+            <p style={{ fontSize: 16, color: '#666', fontWeight: 600 }}>
+              {step === 'loading-recipe' ? 'Recept genereren...' : step === 'loading-subs' ? 'Alternatieven zoeken...' : 'Recept aanpassen...'}
+            </p>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ── INGREDIËNTEN ── */}
+        {step === 'ingredients' && recipe && (
+          <>
+            <button onClick={() => setStep(selected ? 'suggestions' : 'checkin')} style={{ background: 'none', border: 'none', color: 'var(--kms-orange)', fontWeight: 700, cursor: 'pointer', marginBottom: 16, fontSize: 15 }}>
+              ← Terug
+            </button>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--kms-dark)', marginBottom: 4 }}>{recipe.naam}</h2>
+            <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>{recipe.bereidingstijd} min · {stars(recipe.moeilijkheid)} · {recipe.porties} personen</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--kms-dark)', marginBottom: 10 }}>Kruis aan wat je <strong>niet</strong> in huis hebt:</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+              {sortedIngredients.map(ing => {
+                const missing = missingIngredients.includes(ing.naam)
+                return (
+                  <button key={ing.naam} onClick={() => toggleMissing(ing.naam)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: 12, border: '2px solid',
+                      borderColor: missing ? '#FF4444' : '#E0E0E0', background: missing ? '#FFF0F0' : 'white', cursor: 'pointer' }}>
+                    <span style={{ fontSize: 14, fontWeight: missing ? 700 : 400, color: missing ? '#CC0000' : 'var(--kms-dark)', textDecoration: missing ? 'line-through' : 'none' }}>
+                      {missing ? '✗ ' : ''}{ing.naam}
+                    </span>
+                    <span style={{ fontSize: 13, color: '#888' }}>{ing.hoeveelheid} {ing.eenheid}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Extra ingrediënten */}
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--kms-dark)', marginBottom: 8 }}>Extra ingrediënten toevoegen?</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input value={extraInput} onChange={e => setExtraInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addExtra()}
+                placeholder="bijv. champignons" style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #E0E0E0', fontSize: 14 }} />
+              <button onClick={addExtra} style={{ padding: '10px 16px', background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>+</button>
+            </div>
+            {extraIngredients.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                {extraIngredients.map(e => (
+                  <span key={e} style={{ background: '#E8F5E9', color: '#2E7D32', padding: '4px 10px', borderRadius: 12, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {e} <button onClick={() => removeExtra(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2E7D32', fontWeight: 700, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {saveMessage && <p style={{ color: 'green', fontSize: 13, marginBottom: 8 }}>{saveMessage}</p>}
+            {error && <p style={{ color: 'red', marginBottom: 12, fontSize: 14 }}>{error}</p>}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={toggleSaveRecipe} disabled={saving}
+                style={{ flex: 1, padding: '14px', border: '2px solid var(--kms-orange)', background: 'white', color: 'var(--kms-orange)', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                {savedRecipeId ? '🗑️ Verwijder' : '🔖 Opslaan'}
+              </button>
+              <button onClick={fetchSubstitutions}
+                style={{ flex: 2, padding: '14px', background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+                {missingIngredients.length > 0 ? '🔄 Vind alternatieven' : '👨‍🍳 Aan de slag!'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── SUBSTITUTEN ── */}
+        {step === 'substitutes' && (
+          <>
+            <button onClick={() => setStep('ingredients')} style={{ background: 'none', border: 'none', color: 'var(--kms-orange)', fontWeight: 700, cursor: 'pointer', marginBottom: 16, fontSize: 15 }}>
+              ← Terug
+            </button>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--kms-dark)', marginBottom: 16 }}>🔄 Kies je alternatieven</h2>
+            {alternativeDish ? (
+              <div style={{ background: '#FFF3EE', borderRadius: 14, padding: 20, marginBottom: 20 }}>
+                <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--kms-dark)', marginBottom: 8 }}>Te veel ingrediënten missen — alternatief gerecht:</p>
+                <p style={{ fontWeight: 800, fontSize: 18, color: 'var(--kms-orange)', marginBottom: 4 }}>{alternativeDish.alternative_dish}</p>
+                <p style={{ fontSize: 14, color: '#666' }}>{alternativeDish.reason}</p>
+                <button onClick={() => { setSelected({ naam: alternativeDish.alternative_dish, moeilijkheid: 2, bereidingstijd: 30, waarom_dit_past: '', top_ingredienten: [], avontuursscore: 3, keuken_type: 'Overig', niveau_vereist: 1 }); setStep('loading-recipe') }}
+                  style={{ marginTop: 14, padding: '12px 20px', background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
+                  Maak {alternativeDish.alternative_dish} →
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 20 }}>
+                {missingIngredients.map(ing => (
+                  <div key={ing}>
+                    <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--kms-dark)', marginBottom: 8 }}>Vervang <em>{ing}</em> door:</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {(substitutionOptions[ing] || []).concat(['__weglaten__']).map(opt => (
+                        <button key={opt} onClick={() => setChosenSubstitutes(prev => ({ ...prev, [ing]: opt }))}
+                          style={{ padding: '10px 14px', borderRadius: 10, border: '2px solid',
+                            borderColor: chosenSubstitutes[ing] === opt ? 'var(--kms-orange)' : '#E0E0E0',
+                            background: chosenSubstitutes[ing] === opt ? '#FFF3EE' : 'white',
+                            textAlign: 'left', cursor: 'pointer', fontSize: 14,
+                            color: opt === '__weglaten__' ? '#888' : 'var(--kms-dark)', fontWeight: chosenSubstitutes[ing] === opt ? 700 : 400 }}>
+                          {opt === '__weglaten__' ? '🚫 Weglaten' : opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {error && <p style={{ color: 'red', marginBottom: 12, fontSize: 14 }}>{error}</p>}
+            {!alternativeDish && (
+              <button onClick={startCooking}
+                style={{ width: '100%', padding: '16px', background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 14, fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>
+                👨‍🍳 Kook met alternatieven!
+              </button>
+            )}
+          </>
+        )}
+
+      </div>
 
       <NavBar />
     </div>
