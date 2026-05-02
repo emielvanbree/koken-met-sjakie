@@ -35,7 +35,7 @@ export default function KokenPage() {
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   const [selectedVoiceName, setSelectedVoiceName] = useState<string>('')
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem('kms-active-recipe')
