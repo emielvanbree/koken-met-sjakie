@@ -30,4 +30,19 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob:",
               "connect-src 'self'",
-              "font-src 'sel
+              "font-src 'self'",
+              "frame-src 'none'",
+              "object-src 'none'",
+            ].join('; '),
+          },
+        ],
+      },
+    ]
+  },
+  allowedDevOrigins: ['192.168.178.32'],
+  experimental: {
+    serverActions: { allowedOrigins: ['localhost:3000', '192.168.178.32:3000', '*.trycloudflare.com', '*.railway.app', '*.up.railway.app'] },
+  },
+}
+
+export default withPWA(nextConfig)

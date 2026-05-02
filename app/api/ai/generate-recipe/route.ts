@@ -52,4 +52,30 @@ ${skipContext ? `Laat deze ingrediënten volledig weg: <user_input>${skipContext
 ${missing.length > 0 && !subsContext && !skipContext ? `Ontbrekende ingrediënten: <user_input>${missing.join(', ')}</user_input> — pas het recept aan.` : ''}
 ${extras.length > 0 ? `De gebruiker wil ook deze extra ingrediënten verwerken in het recept: <user_input>${extras.join(', ')}</user_input> — verwerk ze op een logische manier in het gerecht.` : ''}
 
-Geef ALLEEN een geldig JSON object terug, gee
+Geef ALLEEN een geldig JSON object terug, geen uitleg:
+{
+  "naam": "string",
+  "beschrijving": "string (max 100 tekens)",
+  "bereidingstijd": number,
+  "moeilijkheid": number (1-5),
+  "porties": number,
+  "keuken_type": "string",
+  "ingredienten": [{"naam": "string", "hoeveelheid": number, "eenheid": "string", "winkel_sectie": "string", "is_substituut": false}],
+  "stappen": [{"stap_nummer": number, "instructie": "string", "ingredienten_deze_stap": [], "heeft_timer": false, "timer": null, "techniek_uitleg": null, "proactieve_tip": null}],
+  "chef_tip": "string",
+  "badges_mogelijk": []
+}`
+      }]
+    })
+    const text = message.content[0].type === 'text' ? message.content[0].text : ''
+    const cb = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+    const src = cb ? cb[1] : text
+    const jsonMatch = src.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) return NextResponse.json({ error: 'Geen recept gegenereerd' }, { status: 500 })
+    const recipe = JSON.parse(jsonMatch[0])
+    return NextResponse.json({ recipe })
+  } catch (e) {
+    console.error('generate-recipe error:', e)
+    return NextResponse.json({ error: 'Recept genereren mislukt' }, { status: 500 })
+  }
+}

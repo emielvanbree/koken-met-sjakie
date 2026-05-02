@@ -319,4 +319,23 @@ export default function VandaagPage() {
                           {entry.name}
                         </p>
                         <p style={{ fontSize: 12, color: '#888', margin: 0 }}>
-                          {entry.recipe.bereidingstijd} min · {'⭐'.repeat(entry.recipe.moeilij
+                          {entry.recipe.bereidingstijd} min · {'⭐'.repeat(entry.recipe.moeilijkheid)}
+                        </p>
+                      </div>
+                      <button onClick={() => handleSavedRecipeStart(entry)}
+                        style={{ background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Kook dit →
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <NavBar />
+    </div>
+  )
+}

@@ -118,4 +118,41 @@ export default function DagboekPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <span style={{ fontSize: 22 }}>{CUISINE_EMOJI[entry.cuisine] || '🍽️'}</span>
-                  <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--kms-dark)', marg
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--kms-dark)', margin: 0 }}>{entry.dishName}</h3>
+                </div>
+                <p style={{ fontSize: 12, color: '#888', margin: 0 }}>
+                  {new Date(entry.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {entry.emoji && <span style={{ fontSize: 24 }}>{entry.emoji}</span>}
+                <button onClick={() => handleRestart(entry)} disabled={restarting === entry.id}
+                  style={{ background: 'var(--kms-orange)', color: 'white', border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  {restarting === entry.id ? '⏳' : '🔄'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+              {entry.rating && <span style={{ fontSize: 13, color: '#F4A261' }}>{STARS(entry.rating)}</span>}
+              <span style={{ fontSize: 12, background: '#F3F3F3', padding: '2px 8px', borderRadius: 6, color: '#666' }}>{DIFF_LABEL[entry.difficulty]}</span>
+              {entry.cookDuration > 0 && <span style={{ fontSize: 12, background: '#F3F3F3', padding: '2px 8px', borderRadius: 6, color: '#666' }}>⏱️ {entry.cookDuration}min</span>}
+              {entry.usedPanic && <span style={{ fontSize: 12, background: '#FFF3EE', padding: '2px 8px', borderRadius: 6, color: 'var(--kms-orange)' }}>🚨 Panic gebruikt</span>}
+            </div>
+
+            {entry.notes && <p style={{ fontSize: 13, color: '#555', margin: '0 0 8px', fontStyle: 'italic' }}>"{entry.notes}"</p>}
+
+            {entry.badgesEarned.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {entry.badgesEarned.map((b: string) => (
+                  <span key={b} style={{ fontSize: 11, background: '#FFF3EE', border: '1px solid #FFD0B0', padding: '2px 6px', borderRadius: 6, color: 'var(--kms-orange)' }}>{b}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <NavBar />
+    </div>
+  )
+}

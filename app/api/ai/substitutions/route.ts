@@ -42,4 +42,12 @@ Geef precies 2 opties per ingrediënt. Geef ALLEEN dit JSON object terug, geen t
     const text = message.content[0].type === 'text' ? message.content[0].text : ''
     const cb2 = text.match(/```(?:json)?\s*([\s\S]*?)```/)
     const src2 = cb2 ? cb2[1] : text
-    const 
+    const jsonMatch2 = src2.match(/\{[\s\S]*\}/)
+    if (!jsonMatch2) return NextResponse.json({ substitutions: {} })
+    const parsed = JSON.parse(jsonMatch2[0])
+    return NextResponse.json(parsed)
+  } catch (e) {
+    console.error('substitutions error:', e)
+    return NextResponse.json({ error: 'Substituten ophalen mislukt' }, { status: 500 })
+  }
+}

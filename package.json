@@ -25,4 +25,9 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
-    "@types/react-dom
+    "@types/react-dom": "^19",
+    "prisma": "5.22.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

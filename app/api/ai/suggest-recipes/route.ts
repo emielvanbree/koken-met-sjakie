@@ -39,4 +39,20 @@ Context: <user_input>${JSON.stringify(context)}</user_input>
 
 ${context.mood === 'Seizoensgerecht' && context.current_month ? `De gebruiker wil een seizoensgerecht. Het is nu ${context.current_month}. Gebruik uitsluitend ingrediënten die in ${context.current_month} in Nederland in het seizoen zijn. Vermeld in waarom_dit_past waarom het ingredient nu in het seizoen is.` : ''}
 
-Elk recept bevat: naam (string, in het Nederlands), moeilijkheid (1-5), bereidingstijd (minuten, integer), waarom_dit_past (string, max 80 tekens, in het N
+Elk recept bevat: naam (string, in het Nederlands), moeilijkheid (1-5), bereidingstijd (minuten, integer), waarom_dit_past (string, max 80 tekens, in het Nederlands), top_ingredienten (array van max 4 strings), avontuursscore (1-5), keuken_type (string), niveau_vereist (1-5).
+
+Geef ALLEEN een geldige JSON array terug, geen tekst eromheen: [{"naam": "...", ...}]`
+      }]
+    })
+    const text = message.content[0].type === 'text' ? message.content[0].text : ''
+    const cb = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+    const src = cb ? cb[1] : text
+    const arrMatch = src.match(/\[[\s\S]*\]/)
+    if (!arrMatch) return NextResponse.json({ error: 'Geen suggesties ontvangen' }, { status: 500 })
+    const suggestions = JSON.parse(arrMatch[0])
+    return NextResponse.json({ suggestions })
+  } catch (e) {
+    console.error('suggest-recipes error:', e)
+    return NextResponse.json({ error: 'Receptsuggesties ophalen mislukt' }, { status: 500 })
+  }
+}
