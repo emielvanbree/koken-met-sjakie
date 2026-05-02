@@ -102,8 +102,8 @@ export default function KokenPage() {
     const newTimer: Timer = {
       id: `${Date.now()}`,
       componentNaam: step.timer.component_naam,
-      duurSeconden: step.timer.duur_seconden,
-      resterendSeconden: step.timer.duur_seconden,
+      duurSeconden: Math.max(1, Number(step.timer.duur_seconden) || 60),
+      resterendSeconden: Math.max(1, Number(step.timer.duur_seconden) || 60),
       type: step.timer.type as Timer['type'],
       actief: true, voltooid: false,
     }
@@ -207,7 +207,7 @@ export default function KokenPage() {
     }
   }
 
-  function formatTime(s: number) { return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}` }
+  function formatTime(s: number) { if (!isFinite(s) || isNaN(s)) return '-:--'; return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}` }
   function timerProgress(t: Timer) { return ((t.duurSeconden - t.resterendSeconden) / t.duurSeconden) * 100 }
 
   if (!recipe) return (

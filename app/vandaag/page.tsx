@@ -412,9 +412,14 @@ export default function VandaagPage() {
         {/* ── SUGGESTIES ── */}
         {step === 'suggestions' && (
           <>
-            <button onClick={() => setStep('checkin')} style={{ background: 'none', border: 'none', color: 'var(--kms-orange)', fontWeight: 700, cursor: 'pointer', marginBottom: 16, fontSize: 15 }}>
-              ← Terug
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <button onClick={() => setStep('checkin')} style={{ background: 'none', border: 'none', color: 'var(--kms-orange)', fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
+                ← Terug
+              </button>
+              <button onClick={fetchSuggestions} disabled={loading} style={{ background: '#FFF3EE', border: '2px solid var(--kms-orange)', color: 'var(--kms-orange)', fontWeight: 700, cursor: 'pointer', fontSize: 14, borderRadius: 20, padding: '6px 14px' }}>
+                {loading ? '⏳' : '🔄 Andere ideeën'}
+              </button>
+            </div>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--kms-dark)', marginBottom: 16 }}>🍽️ Jouw receptideeën</h2>
             {error && <p style={{ color: 'red', marginBottom: 12 }}>{error}</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
