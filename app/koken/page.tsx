@@ -32,10 +32,12 @@ export default function KokenPage() {
   const [usedPanic, setUsedPanic] = useState(false)
   const [startTime] = useState(Date.now())
   const [voiceModalOpen, setVoiceModalOpen] = useState(false)
+  const [timerWarningOpen, setTimerWarningOpen] = useState(false)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   const [selectedVoiceName, setSelectedVoiceName] = useState<string>('')
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const recognitionRef = useRef<any>(null)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem('kms-active-recipe')
@@ -65,6 +67,16 @@ export default function KokenPage() {
         setTimeout(() => speak(`Stap 1: Verzamel alle ingrediënten voor ${parsed.naam}.`), 800)
       } catch {}
     }
+    // Wake Lock: scherm aanblijven tijdens kookmodus
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+        }
+      } catch {}
+    }
+    requestWakeLock()
+
     // Laad beschikbare stemmen — browsers laden deze asynchroon
     const loadVoices = () => {
       const voices = getAvailableVoices()
@@ -94,7 +106,7 @@ export default function KokenPage() {
         return { ...t, resterendSeconden: remaining }
       }))
     }, 1000)
-    return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current) }
+    return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current); if (wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}) } }
   }, [])
 
   function startTimer(step: RecipeStep) {
@@ -130,8 +142,21 @@ export default function KokenPage() {
     if (currentStep < recipe.stappen.length - 1) {
       goToStep(currentStep + 1)
     } else {
-      setRatingOpen(true)
+      // Laatste stap: controleer of er nog actieve timers lopen
+      const heeftActieveTimer = timers.some(t => t.actief && !t.voltooid)
+      if (heeftActieveTimer) {
+        setTimerWarningOpen(true)
+      } else {
+        if (wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}) }
+        setRatingOpen(true)
+      }
     }
+  }
+
+  function handleTochDoorgaan() {
+    setTimerWarningOpen(false)
+    if (wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}) }
+    setRatingOpen(true)
   }
 
   async function loadTechnique(term: string) {
@@ -477,6 +502,28 @@ export default function KokenPage() {
             <button className="btn-primary" onClick={() => router.push('/dagboek')}>
               Naar mijn dagboek →
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Timer Waarschuwing Modal */}
+      {timerWarningOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: '28px 24px', maxWidth: 360, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>⏱️</div>
+            <h2 style={{ fontWeight: 800, fontSize: 19, color: 'var(--kms-dark)', marginBottom: 10 }}>Timer loopt nog!</h2>
+            <p style={{ color: '#666', fontSize: 15, lineHeight: 1.5, marginBottom: 24 }}>
+              Het gerecht is waarschijnlijk nog niet klaar. Weet je zeker dat je nu al wilt doorgaan naar de beoordeling?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={() => setTimerWarningOpen(false)} className="btn-primary">
+                ← Wacht op de timer
+              </button>
+              <button onClick={handleTochDoorgaan}
+                style={{ padding: '14px', border: '2px solid #CCC', borderRadius: 12, background: 'white', color: '#888', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>
+                Doorgaan zonder timer
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -11,7 +11,6 @@ const CUISINE_EMOJI: Record<string, string> = {
 
 const MOOD_OPTIONS = ['Geen voorkeur', 'Lekker simpel', 'Iets nieuws proberen', 'Indruk maken', 'Comfortfood', 'Licht & gezond', 'Seizoensgerecht']
 const TIME_OPTIONS = ['< 20 min', '20-45 min', '45-90 min', '> 90 min']
-const PERSONS_OPTIONS = ['Voor mezelf', 'Voor twee', 'Voor een gezin', '4 of meer']
 const CUISINE_OPTIONS = ['Geen voorkeur', 'Italiaans', 'Aziatisch', 'Mexicaans', 'Nederlands', 'Indiaas', 'Mediterraan', 'Japans']
 
 interface Suggestion {
@@ -38,7 +37,7 @@ export default function VandaagPage() {
   const [step, setStep] = useState<'checkin' | 'suggestions' | 'loading-recipe' | 'ingredients' | 'loading-subs' | 'substitutes' | 'loading-adjusted'>('checkin')
   const [mood, setMood] = useState('')
   const [tijd, setTijd] = useState('')
-  const [personen, setPersonen] = useState('')
+  const [personen, setPersonen] = useState('2')
   const [keuken, setKeuken] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(false)
@@ -66,7 +65,7 @@ export default function VandaagPage() {
     } catch { /* localStorage niet beschikbaar */ }
   }, [])
 
-  const servings = personen === 'Voor mezelf' ? 1 : personen === 'Voor een gezin' ? 4 : personen === '4 of meer' ? 5 : 2
+  const servings = Math.max(1, Math.min(20, parseInt(personen) || 2))
 
   async function fetchSuggestions() {
     setLoading(true); setError('')
@@ -370,16 +369,15 @@ export default function VandaagPage() {
             {/* Personen */}
             <div style={{ marginBottom: 20 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--kms-dark)', marginBottom: 10 }}>Voor hoeveel personen?</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {PERSONS_OPTIONS.map(p => (
-                  <button key={p} onClick={() => setPersonen(p === personen ? '' : p)}
-                    style={{ padding: '8px 14px', borderRadius: 20, border: '2px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                      borderColor: personen === p ? 'var(--kms-orange)' : '#E0E0E0',
-                      background: personen === p ? 'var(--kms-orange)' : 'white',
-                      color: personen === p ? 'white' : 'var(--kms-dark)' }}>
-                    {p}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button onClick={() => setPersonen(p => String(Math.max(1, (parseInt(p) || 2) - 1)))}
+                  style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid var(--kms-orange)', background: 'white', color: 'var(--kms-orange)', fontSize: 22, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>−</button>
+                <div style={{ textAlign: 'center', minWidth: 80 }}>
+                  <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--kms-dark)' }}>{personen}</span>
+                  <p style={{ fontSize: 12, color: '#888', margin: '2px 0 0' }}>{parseInt(personen) === 1 ? 'persoon' : 'personen'}</p>
+                </div>
+                <button onClick={() => setPersonen(p => String(Math.min(20, (parseInt(p) || 2) + 1)))}
+                  style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid var(--kms-orange)', background: 'var(--kms-orange)', color: 'white', fontSize: 22, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>+</button>
               </div>
             </div>
 
@@ -401,7 +399,7 @@ export default function VandaagPage() {
 
             {error && <p style={{ color: 'red', marginBottom: 12, fontSize: 14 }}>{error}</p>}
 
-            <button onClick={fetchSuggestions} disabled={loading || (!mood && !tijd && !personen && !keuken)}
+            <button onClick={fetchSuggestions} disabled={loading || (!mood && !tijd && !keuken)}
               style={{ width: '100%', padding: '16px', background: 'var(--kms-orange)', color: 'white', border: 'none',
                 borderRadius: 14, fontSize: 16, fontWeight: 800, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
               {loading ? '⏳ Recepten ophalen...' : '✨ Geef me receptideeën!'}
