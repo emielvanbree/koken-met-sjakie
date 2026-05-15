@@ -28,4 +28,6 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "prisma": "5.22.0",
-    "typescript": "
+    "typescript": "^5"
+  }
+}
