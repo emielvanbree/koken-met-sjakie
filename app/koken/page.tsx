@@ -624,3 +624,9 @@ export default function KokenPage() {
             </button>
           </div>
         </div>
+      )}
+
+      <NavBar />
+    </div>
+  )
+}
