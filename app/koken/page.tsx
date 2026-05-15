@@ -65,7 +65,8 @@ export default function KokenPage() {
   const lastStepTimerIdRef = useRef<string | null>(null)
 
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem('kms-active-recipe')
@@ -623,9 +624,3 @@ export default function KokenPage() {
             </button>
           </div>
         </div>
-      )}
-
-      <NavBar />
-    </div>
-  )
-}
