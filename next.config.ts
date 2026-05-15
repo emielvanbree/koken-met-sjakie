@@ -13,6 +13,14 @@ const withPWA = withPWAInit({
 })
 
 const nextConfig: NextConfig = {
+  webpack(config, { dev }) {
+    // Disable filesystem cache in production to avoid corrupted-cache failures
+    // on Railway where .next/cache is a mounted volume that can't be wiped.
+    if (!dev) {
+      config.cache = false
+    }
+    return config
+  },
   async headers() {
     return [
       {
@@ -36,13 +44,4 @@ const nextConfig: NextConfig = {
             ].join('; '),
           },
         ],
-      },
-    ]
-  },
-  allowedDevOrigins: ['192.168.178.32'],
-  experimental: {
-    serverActions: { allowedOrigins: ['localhost:3000', '192.168.178.32:3000', '*.trycloudflare.com', '*.railway.app', '*.up.railway.app'] },
-  },
-}
-
-export default withPWA(nextConfig)
+      
