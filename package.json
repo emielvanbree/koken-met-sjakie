@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -H 0.0.0.0",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
@@ -14,20 +14,20 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@prisma/client": "5.22.0",
+    "@tailwindcss/postcss": "^4",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",
     "next": "16.2.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "tailwindcss": "^4"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "prisma": "5.22.0",
-    "tailwindcss": "^4",
     "typescript": "^5"
   }
 }
