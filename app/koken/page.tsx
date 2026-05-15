@@ -7,8 +7,8 @@ import { speak, stopSpeaking, getAvailableVoices, TTS_STORAGE_KEY } from '@/lib/
 
 const TIMER_COLORS = ['#FF6B35','#2D6A4F','#E63946','#4361EE','#7209B7','#F72585']
 
-// Speelt een duidelijk alarmgeluid via Web Audio API
-function playAlarm() {
+// Speelt één set piepjes via Web Audio API
+function playBeep() {
   try {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     const ctx = new AudioCtx()
@@ -24,11 +24,9 @@ function playAlarm() {
       osc.start(ctx.currentTime + startAt)
       osc.stop(ctx.currentTime + startAt + dur)
     }
-    // Drie oplopende piepjes
     schedule(880,  0.00, 0.20)
     schedule(880,  0.28, 0.20)
-    schedule(1100, 0.56, 0.40)
-    schedule(1100, 1.00, 0.40)
+    schedule(1100, 0.56, 0.35)
   } catch { /* AudioContext niet beschikbaar — stille fallback */ }
 }
 
@@ -64,16 +62,72 @@ export default function KokenPage() {
   const [waitingForLastStepTimer, setWaitingForLastStepTimer] = useState(false)
   const lastStepTimerIdRef = useRef<string | null>(null)
 
+  // Alarm-beheer: welke timers piepen nu actief
+  const [alarmingTimers, setAlarmingTimers] = useState<Set<string>>(new Set())
+  const alarmIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
+
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
+
+  // startAlarm via ref zodat de timer-tick-closure altijd de laatste versie gebruikt
+  const startAlarmRef = useRef<(id: string) => void>(() => {})
+
+  const startAlarm = useCallback((id: string) => {
+    playBeep()
+    setAlarmingTimers(prev => new Set([...prev, id]))
+    let count = 0
+    const interval = setInterval(() => {
+      count++
+      if (count >= 7) {
+        // Na ~10 seconden (7 × 1.4s) automatisch stoppen
+        clearInterval(interval)
+        alarmIntervalsRef.current.delete(id)
+        setAlarmingTimers(prev => { const s = new Set(prev); s.delete(id); return s })
+        return
+      }
+      playBeep()
+    }, 1400)
+    alarmIntervalsRef.current.set(id, interval)
+  }, [])
+
+  useEffect(() => { startAlarmRef.current = startAlarm }, [startAlarm])
+
+  function stopAlarm(id: string) {
+    const iv = alarmIntervalsRef.current.get(id)
+    if (iv) clearInterval(iv)
+    alarmIntervalsRef.current.delete(id)
+    setAlarmingTimers(prev => { const s = new Set(prev); s.delete(id); return s })
+  }
+
+  // "✓ Klaar" op alarmerend timer: stop alarm + verwijder timer + ga evt. naar beoordeling
+  function dismissAlarm(id: string) {
+    stopAlarm(id)
+    setTimers(prev => prev.filter(t => t.id !== id))
+    if (id === lastStepTimerIdRef.current) {
+      lastStepTimerIdRef.current = null
+      setTimeout(() => setRatingOpen(true), 300)
+    }
+  }
+
+  // "+5 min" op alarmerend timer: stop alarm + heractiveer timer met 5 extra minuten
+  function extendAlarm(id: string) {
+    stopAlarm(id)
+    setTimers(prev => prev.map(t => {
+      if (t.id !== id) return t
+      return { ...t, voltooid: false, actief: true, resterendSeconden: 300, duurSeconden: t.duurSeconden + 300 }
+    }))
+    // Als het de laatste-stap-timer was, blijf wachten
+    if (id === lastStepTimerIdRef.current) {
+      setWaitingForLastStepTimer(true)
+    }
+  }
 
   useEffect(() => {
     const stored = sessionStorage.getItem('kms-active-recipe')
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
-        // Injecteer een vaste "Verzamel ingrediënten" stap als eerste stap
         const ingredientStep: RecipeStep = {
           stap_nummer: 1,
           instructie: `Verzamel alle ingrediënten voor ${parsed.naam}.`,
@@ -85,18 +139,15 @@ export default function KokenPage() {
           techniek_uitleg: null,
           proactieve_tip: { type: 'techniek', tekst: 'Leg alles klaar voordat je begint — dat maakt het koken veel rustiger.' },
         }
-        // Hernummer de bestaande stappen
         const hergenummerd = (parsed.stappen || []).map((s: RecipeStep, idx: number) => ({
           ...s,
           stap_nummer: idx + 2,
         }))
         const recipeMetVerzamel = { ...parsed, stappen: [ingredientStep, ...hergenummerd] }
         setRecipe(recipeMetVerzamel)
-        // Spreek stap 1 direct uit zodra de stemmen geladen zijn
         setTimeout(() => speak(`Stap 1: Verzamel alle ingrediënten voor ${parsed.naam}.`), 800)
       } catch {}
     }
-    // Laad beschikbare stemmen — browsers laden deze asynchroon
     const loadVoices = () => {
       const voices = getAvailableVoices()
       setAvailableVoices(voices)
@@ -112,36 +163,38 @@ export default function KokenPage() {
     }
   }, [])
 
-  // Timer tick — telt af en speelt alarm als timer op 0 komt
+  // Timer tick — telt af en start alarm als timer op 0 komt
   useEffect(() => {
     timerIntervalRef.current = setInterval(() => {
-      setTimers(prev => prev.map(t => {
-        if (!t.actief || t.voltooid) return t
-        const remaining = t.resterendSeconden - 1
-        if (remaining <= 0) {
-          speak(`De ${t.componentNaam} is klaar!`)
-          playAlarm()
-          return { ...t, resterendSeconden: 0, voltooid: true, actief: false }
-        }
-        return { ...t, resterendSeconden: remaining }
-      }))
+      setTimers(prev => {
+        let completedId: string | null = null
+        const updated = prev.map(t => {
+          if (!t.actief || t.voltooid) return t
+          const remaining = t.resterendSeconden - 1
+          if (remaining <= 0) {
+            speak(`De ${t.componentNaam} is klaar!`)
+            completedId = t.id
+            return { ...t, resterendSeconden: 0, voltooid: true, actief: false }
+          }
+          return { ...t, resterendSeconden: remaining }
+        })
+        if (completedId) startAlarmRef.current(completedId)
+        return updated
+      })
     }, 1000)
     return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current) }
   }, [])
 
-  // Detecteer wanneer de laatste-stap-timer voltooid is → ga naar beoordeling
+  // Detecteer wanneer de laatste-stap-timer voltooid is → niet auto-doorsturen, wacht op alarm-dismissal
   useEffect(() => {
     if (!waitingForLastStepTimer || !lastStepTimerIdRef.current) return
     const lastTimer = timers.find(t => t.id === lastStepTimerIdRef.current)
     if (lastTimer?.voltooid) {
+      // Alarm is gestart — banner weghalen, maar wachten tot gebruiker "Klaar" klikt
       setWaitingForLastStepTimer(false)
-      lastStepTimerIdRef.current = null
-      // Kleine vertraging zodat de alarm-animatie even zichtbaar is
-      setTimeout(() => setRatingOpen(true), 800)
     }
   }, [timers, waitingForLastStepTimer])
 
-  // Voeg een nieuwe timer toe en geef het ID terug
   function startTimer(step: RecipeStep): string | null {
     if (!step.heeft_timer || !step.timer) return null
     const id = `${Date.now()}`
@@ -157,10 +210,8 @@ export default function KokenPage() {
     return id
   }
 
-  // Verwijder een voltooide timer uit de lijst
   function dismissTimer(id: string) { setTimers(prev => prev.filter(t => t.id !== id)) }
 
-  // Pas de resterende tijd van een actieve timer aan (+/− seconden)
   function adjustTimer(id: string, deltaSecs: number) {
     setTimers(prev => prev.map(t => {
       if (t.id !== id || t.voltooid || !t.actief) return t
@@ -170,13 +221,12 @@ export default function KokenPage() {
     }))
   }
 
-  // Stop een actieve timer handmatig
   function stopTimer(id: string) {
+    stopAlarm(id)
     setTimers(prev => prev.map(t => {
       if (t.id !== id) return t
       return { ...t, actief: false, voltooid: true, resterendSeconden: 0 }
     }))
-    // Als dit de laatste-stap-timer is: ga naar beoordeling
     if (id === lastStepTimerIdRef.current) {
       setWaitingForLastStepTimer(false)
       lastStepTimerIdRef.current = null
@@ -199,7 +249,6 @@ export default function KokenPage() {
     if (step.heeft_timer) {
       const timerId = startTimer(step)
       if (isLastStep && timerId) {
-        // Laatste stap met wekker: wacht tot wekker klaar is
         lastStepTimerIdRef.current = timerId
         setWaitingForLastStepTimer(true)
         return
@@ -213,7 +262,6 @@ export default function KokenPage() {
     }
   }
 
-  // Handmatige knop op de laatste stap om toch door te gaan (ook als wekker nog loopt)
   function handleFinishNow() {
     setWaitingForLastStepTimer(false)
     lastStepTimerIdRef.current = null
@@ -343,13 +391,14 @@ export default function KokenPage() {
             {timers.map((t, i) => {
               const color = TIMER_COLORS[i % TIMER_COLORS.length]
               const isExpiring = t.resterendSeconden <= 30 && !t.voltooid
+              const isAlarming = alarmingTimers.has(t.id)
               return (
                 <div key={t.id}
-                  style={{ background: t.voltooid ? '#E8F5E9' : 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: `2px solid ${isExpiring ? 'var(--kms-red)' : color}` }}>
+                  style={{ background: isAlarming ? '#FFF3CD' : t.voltooid ? '#E8F5E9' : 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: `2px solid ${isAlarming ? '#FFC107' : isExpiring ? 'var(--kms-red)' : color}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {/* Cirkel met tijd */}
-                    <div style={{ width: 52, height: 52, borderRadius: '50%', border: `3px solid ${color}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: t.voltooid ? '#2D6A4F' : color }}>
-                      {t.voltooid ? '✓' : formatTime(t.resterendSeconden)}
+                    {/* Cirkel met tijd / alarm-indicator */}
+                    <div style={{ width: 52, height: 52, borderRadius: '50%', border: `3px solid ${isAlarming ? '#FFC107' : color}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isAlarming ? 22 : 12, fontWeight: 800, color: isAlarming ? '#E65100' : t.voltooid ? '#2D6A4F' : color }}>
+                      {isAlarming ? '🔔' : t.voltooid ? '✓' : formatTime(t.resterendSeconden)}
                     </div>
 
                     {/* Naam + voortgangsbalk */}
@@ -360,11 +409,23 @@ export default function KokenPage() {
                           <div style={{ width: `${timerProgress(t)}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 1s linear' }} />
                         </div>
                       )}
-                      {t.voltooid && <p style={{ fontSize: 11, color: '#2D6A4F', margin: 0, fontWeight: 600 }}>Klaar! Tik om te sluiten</p>}
+                      {isAlarming && <p style={{ fontSize: 11, color: '#E65100', margin: 0, fontWeight: 700 }}>⏰ Klaar! Wat wil je doen?</p>}
+                      {t.voltooid && !isAlarming && <p style={{ fontSize: 11, color: '#2D6A4F', margin: 0, fontWeight: 600 }}>Klaar! Tik om te sluiten</p>}
                     </div>
 
                     {/* Bedieningsknoppen */}
-                    {!t.voltooid && t.actief ? (
+                    {isAlarming ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                        <button onClick={() => dismissAlarm(t.id)}
+                          style={{ background: '#2D6A4F', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'white', cursor: 'pointer' }}>
+                          ✓ Klaar
+                        </button>
+                        <button onClick={() => extendAlarm(t.id)}
+                          style={{ background: '#FFF3EE', border: '1.5px solid var(--kms-orange)', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--kms-orange)', cursor: 'pointer' }}>
+                          +5 min
+                        </button>
+                      </div>
+                    ) : !t.voltooid && t.actief ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
                         <button onClick={() => adjustTimer(t.id, 60)}
                           style={{ background: '#E8F5E9', border: 'none', borderRadius: 8, padding: '4px 8px', fontWeight: 700, fontSize: 12, color: '#2D6A4F', cursor: 'pointer' }}>
@@ -424,7 +485,6 @@ export default function KokenPage() {
           </div>
           <p style={{ fontSize: 18, fontWeight: 600, color: 'var(--kms-dark)', lineHeight: 1.5, marginBottom: 12 }}>{step.instructie}</p>
 
-          {/* Stap 1: toon de volledige ingrediëntenlijst als checklist */}
           {currentStep === 0 && recipe.ingredienten?.length > 0 ? (
             <div style={{ marginTop: 4 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Ingrediëntenlijst</p>
@@ -464,7 +524,6 @@ export default function KokenPage() {
           </div>
         )}
 
-        {/* Hoofdknop — verberg als we wachten op de laatste-stap-timer */}
         {!waitingForLastStepTimer && (
           <button className="btn-primary" onClick={handleKlaar} style={{ fontSize: 18, padding: '16px', marginBottom: 12 }}>
             {isLastStep ? '🎉 Klaar! Beoordeel gerecht' : '✅ Klaar! Volgende stap →'}
@@ -533,6 +592,14 @@ export default function KokenPage() {
       {ratingOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
           <div style={{ background: 'white', width: '100%', borderRadius: '20px 20px 0 0', padding: '24px 20px', maxHeight: '90vh', overflowY: 'auto' }}>
+            {/* Sluitknop rechtsboven */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button onClick={() => { setRatingOpen(false); sessionStorage.removeItem('kms-active-recipe'); router.push('/vandaag') }}
+                style={{ background: '#F3F3F3', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                ✕
+              </button>
+            </div>
+
             <h2 style={{ fontWeight: 800, fontSize: 22, color: 'var(--kms-dark)', textAlign: 'center', marginBottom: 4 }}>🎉 Gelukt!</h2>
             <p style={{ textAlign: 'center', color: '#888', marginBottom: 20 }}>Hoe was de {recipe.naam}?</p>
 
@@ -554,7 +621,6 @@ export default function KokenPage() {
               ))}
             </div>
 
-            {/* Photo upload */}
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontWeight: 600, marginBottom: 8, color: 'var(--kms-dark)' }}>📷 Foto van je gerecht</p>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8F8F8', border: '1.5px dashed #CCC', borderRadius: 12, padding: '12px 16px', cursor: 'pointer' }}>
@@ -567,66 +633,8 @@ export default function KokenPage() {
               )}
             </div>
 
-            {/* Notes */}
             <div style={{ marginBottom: 20 }}>
               <p style={{ fontWeight: 600, marginBottom: 8, color: 'var(--kms-dark)' }}>📝 Notities (optioneel)</p>
               <textarea value={ratingNote} onChange={e => setRatingNote(e.target.value)} rows={3}
                 placeholder="Tips, aanpassingen, of gewoon wat je ervan vond..."
-                style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid #E0E0E0', fontSize: 15, resize: 'none', boxSizing: 'border-box' }} />
-            </div>
-
-            {saveError && (
-              <div style={{ background: '#FFF0F0', border: '1px solid #FFAAAA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#C00', fontSize: 14 }}>
-                {saveError}
-              </div>
-            )}
-
-            <button className="btn-primary" onClick={saveEntry} disabled={saving}>
-              {saving ? '⏳ Opslaan...' : '✅ Sla kookprestatie op'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Badge celebration */}
-      {savedBadges.length > 0 && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 24, padding: '32px 24px', maxWidth: 360, width: '100%', textAlign: 'center' }}>
-            <div style={{ fontSize: 64, marginBottom: 8 }}>🏆</div>
-            <h2 style={{ fontWeight: 800, fontSize: 22, color: 'var(--kms-dark)', marginBottom: 8 }}>
-              {leveledUp ? '🎉 Level up!' : 'Nieuwe badge(s)!'}
-            </h2>
-            {leveledUp && <p style={{ color: 'var(--kms-orange)', fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Je bent een level gestegen!</p>}
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
-              {savedBadges.map(b => (
-                <div key={b.name} style={{ background: '#FFF3EE', borderRadius: 12, padding: '8px 16px', border: '2px solid var(--kms-orange)' }}>
-                  <span style={{ fontSize: 28 }}>{b.emoji}</span>
-                  <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--kms-dark)', margin: '4px 0 0' }}>{b.name}</p>
-                </div>
-              ))}
-            </div>
-            <button className="btn-primary" onClick={() => router.push('/dagboek')}>
-              Naar mijn dagboek →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Level up (without new badges) */}
-      {leveledUp && savedBadges.length === 0 && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 24, padding: '32px 24px', maxWidth: 360, width: '100%', textAlign: 'center' }}>
-            <div style={{ fontSize: 64, marginBottom: 8 }}>⬆️</div>
-            <h2 style={{ fontWeight: 800, fontSize: 22, color: 'var(--kms-dark)', marginBottom: 8 }}>Level up!</h2>
-            <p style={{ color: '#666', marginBottom: 24 }}>Je kookvaardigheden groeien. Ga zo door!</p>
-            <button className="btn-primary" onClick={() => router.push('/dagboek')}>
-              Naar mijn dagboek →
-            </button>
-          </div>
-        </div>
-      )}
-
-      <NavBar />
-    </div>
-  )
-}
+                style={{ width: '100%', padding: '12px', borderRadius: 1
