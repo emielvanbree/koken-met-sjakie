@@ -59,6 +59,7 @@ export default function KokenPage() {
   const [selectedVoiceName, setSelectedVoiceName] = useState<string>('')
 
   const [waitingForLastStepTimer, setWaitingForLastStepTimer] = useState(false)
+  const [confirmLastStepOpen, setConfirmLastStepOpen] = useState(false)
   const lastStepTimerIdRef = useRef<string | null>(null)
 
   // Alarm-beheer: welke timers piepen nu actief
@@ -267,6 +268,11 @@ export default function KokenPage() {
     }
 
     if (isLastStep) {
+      const activeTimers = timers.filter(t => t.actief && !t.voltooid)
+      if (activeTimers.length > 0 || alarmingTimers.size > 0) {
+        setConfirmLastStepOpen(true)
+        return
+      }
       setRatingOpen(true)
     } else {
       goToStep(currentStep + 1)
@@ -276,6 +282,18 @@ export default function KokenPage() {
   function handleFinishNow() {
     setWaitingForLastStepTimer(false)
     lastStepTimerIdRef.current = null
+    setRatingOpen(true)
+  }
+
+  function confirmFinishLastStep() {
+    // Stop alle lopende timers en wekkers
+    alarmIntervalsRef.current.forEach((iv) => clearInterval(iv))
+    alarmIntervalsRef.current.clear()
+    setAlarmingTimers(new Set())
+    setTimers([])
+    setWaitingForLastStepTimer(false)
+    lastStepTimerIdRef.current = null
+    setConfirmLastStepOpen(false)
     setRatingOpen(true)
   }
 
@@ -597,6 +615,28 @@ export default function KokenPage() {
       )}
 
       {/* Rating Modal */}
+      {confirmLastStepOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 28, maxWidth: 360, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+            <p style={{ fontSize: 22, textAlign: 'center', margin: '0 0 8px' }}>⏱️</p>
+            <h2 style={{ fontWeight: 800, fontSize: 18, textAlign: 'center', margin: '0 0 12px', color: 'var(--kms-dark)' }}>Wekker loopt nog!</h2>
+            <p style={{ fontSize: 14, color: '#555', textAlign: 'center', margin: '0 0 24px', lineHeight: 1.5 }}>
+              Er {timers.filter(t => t.actief && !t.voltooid).length + alarmingTimers.size === 1 ? 'loopt nog een wekker' : `lopen nog ${timers.filter(t => t.actief && !t.voltooid).length + alarmingTimers.size} wekkers`}. Weet je zeker dat je klaar bent? De wekkers worden gestopt.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmLastStepOpen(false)}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, background: '#F3F3F3', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: '#555' }}>
+                Nee, wacht
+              </button>
+              <button onClick={confirmFinishLastStep}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, background: 'var(--kms-orange)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: 'white' }}>
+                Ja, ik ben klaar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {ratingOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
           <div style={{ background: 'white', width: '100%', borderRadius: '20px 20px 0 0', padding: '24px 20px', maxHeight: '90vh', overflowY: 'auto' }}>
