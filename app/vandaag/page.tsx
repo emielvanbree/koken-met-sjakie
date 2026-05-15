@@ -38,7 +38,7 @@ export default function VandaagPage() {
   const [step, setStep] = useState<'checkin' | 'suggestions' | 'loading-recipe' | 'ingredients' | 'loading-subs' | 'substitutes' | 'loading-adjusted'>('checkin')
   const [mood, setMood] = useState('')
   const [tijd, setTijd] = useState('')
-  const [personen, setPersonen] = useState('')
+  const [personen, setPersonen] = useState(2)
   const [keuken, setKeuken] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(false)
@@ -70,14 +70,14 @@ export default function VandaagPage() {
     } catch { /* localStorage niet beschikbaar */ }
   }, [])
 
-  const servings = personen === 'Voor mezelf' ? 1 : personen === 'Voor een gezin' ? 4 : personen === '4 of meer' ? 5 : 2
+  const servings = personen
 
   async function fetchSuggestions() {
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/ai/suggest-recipes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_level: 1, available_time: tijd, cooking_for: personen, mood, cuisine_preference: keuken, recent_dishes: [], current_month: new Date().toLocaleString('nl-NL', { month: 'long' }) })
+        body: JSON.stringify({ user_level: 1, available_time: tijd, cooking_for: `${personen} personen`, mood, cuisine_preference: keuken, recent_dishes: [], current_month: new Date().toLocaleString('nl-NL', { month: 'long' }) })
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Fout bij suggesties ophalen'); return }
@@ -327,13 +327,12 @@ export default function VandaagPage() {
 
             <div className="card" style={{ marginBottom: 16 }}>
               <p style={{ fontWeight: 600, marginBottom: 10, color: 'var(--kms-dark)' }}>👥 Voor hoeveel personen?</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {PERSONS_OPTIONS.map(o => (
-                  <button key={o} onClick={() => setPersonen(personen === o ? '' : o)}
-                    style={{ padding: '8px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, background: personen === o ? 'var(--kms-orange)' : '#F3F3F3', color: personen === o ? 'white' : '#444' }}>
-                    {o}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: '#F3F3F3', borderRadius: 14, overflow: 'hidden', width: 'fit-content' }}>
+                <button onClick={() => setPersonen(p => Math.max(1, p - 1))}
+                  style={{ background: 'none', border: 'none', padding: '10px 18px', fontWeight: 800, fontSize: 22, color: 'var(--kms-orange)', cursor: 'pointer', lineHeight: 1 }}>−</button>
+                <span style={{ fontWeight: 700, fontSize: 20, color: 'var(--kms-dark)', minWidth: 36, textAlign: 'center' }}>{personen}</span>
+                <button onClick={() => setPersonen(p => Math.min(20, p + 1))}
+                  style={{ background: 'none', border: 'none', padding: '10px 18px', fontWeight: 800, fontSize: 22, color: 'var(--kms-orange)', cursor: 'pointer', lineHeight: 1 }}>+</button>
               </div>
             </div>
 

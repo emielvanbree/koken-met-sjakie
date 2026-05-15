@@ -63,6 +63,8 @@ export default function KokenPage() {
 
   // Alarm-beheer: welke timers piepen nu actief
   const [alarmingTimers, setAlarmingTimers] = useState<Set<string>>(new Set())
+  // Minuten per timer die de gebruiker kiest bij 'verlengen'
+  const [extendMinutesMap, setExtendMinutesMap] = useState<Map<string, number>>(new Map())
   const alarmIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
 
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -107,11 +109,27 @@ export default function KokenPage() {
     }
   }
 
+  function getExtendMinutes(id: string) {
+    return extendMinutesMap.get(id) ?? 5
+  }
+
+  function setExtendMinutes(id: string, delta: number) {
+    setExtendMinutesMap(prev => {
+      const next = new Map(prev)
+      const current = next.get(id) ?? 5
+      const updated = Math.max(1, Math.min(60, current + delta))
+      next.set(id, updated)
+      return next
+    })
+  }
+
   function extendAlarm(id: string) {
+    const minutes = getExtendMinutes(id)
+    const extraSec = minutes * 60
     stopAlarm(id)
     setTimers(prev => prev.map(t => {
       if (t.id !== id) return t
-      return { ...t, voltooid: false, actief: true, resterendSeconden: 300, duurSeconden: t.duurSeconden + 300 }
+      return { ...t, voltooid: false, actief: true, resterendSeconden: extraSec, duurSeconden: t.duurSeconden + extraSec }
     }))
     if (id === lastStepTimerIdRef.current) {
       setWaitingForLastStepTimer(true)
@@ -408,9 +426,16 @@ export default function KokenPage() {
                           style={{ background: '#2D6A4F', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'white', cursor: 'pointer' }}>
                           ✓ Klaar
                         </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#FFF3EE', border: '1.5px solid var(--kms-orange)', borderRadius: 10, overflow: 'hidden' }}>
+                          <button onClick={() => setExtendMinutes(t.id, -1)}
+                            style={{ background: 'none', border: 'none', padding: '6px 8px', fontWeight: 800, fontSize: 15, color: 'var(--kms-orange)', cursor: 'pointer', lineHeight: 1 }}>−</button>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--kms-orange)', minWidth: 28, textAlign: 'center' }}>{getExtendMinutes(t.id)}m</span>
+                          <button onClick={() => setExtendMinutes(t.id, 1)}
+                            style={{ background: 'none', border: 'none', padding: '6px 8px', fontWeight: 800, fontSize: 15, color: 'var(--kms-orange)', cursor: 'pointer', lineHeight: 1 }}>+</button>
+                        </div>
                         <button onClick={() => extendAlarm(t.id)}
-                          style={{ background: '#FFF3EE', border: '1.5px solid var(--kms-orange)', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, color: 'var(--kms-orange)', cursor: 'pointer' }}>
-                          +5 min
+                          style={{ background: '#FFF3EE', border: '1.5px solid var(--kms-orange)', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, color: 'var(--kms-orange)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          ⏱ Voeg toe
                         </button>
                       </div>
                     ) : !t.voltooid && t.actief ? (
