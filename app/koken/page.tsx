@@ -188,7 +188,11 @@ export default function KokenPage() {
         const recipeMetVerzamel = { ...parsed, stappen: [ingredientStep, ...hergenummerd] }
         setRecipe(recipeMetVerzamel)
         recipeRef.current = recipeMetVerzamel
-        setTimeout(() => speak(`Stap 1: Verzamel alle ingredienten voor ${parsed.naam}.`), 800)
+        // Alleen stap 1 uitspreken als er geen actieve sessie is om naar terug te keren
+        const hasSession = !!localStorage.getItem('kms-cook-session')
+        if (!hasSession) {
+          setTimeout(() => speak(`Stap 1: Verzamel alle ingredienten voor ${parsed.naam}.`), 800)
+        }
       } catch {}
     }
     const loadVoices = () => {
