@@ -101,6 +101,10 @@ export default function KokenPage() {
   const currentStepRef = useRef(0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
+  const panicOpenRef = useRef(false)
+
+  // Sync panicOpenRef zodat voice recognition er gebruik van kan maken
+  useEffect(() => { panicOpenRef.current = panicOpen }, [panicOpen])
 
   // startAlarm via ref zodat de timer-tick-closure altijd de laatste versie gebruikt
   const startAlarmRef = useRef<(id: string) => void>(() => {})
@@ -460,6 +464,13 @@ export default function KokenPage() {
     recognition.interimResults = false
     recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } }; length: number } }) => {
       const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim()
+      // Als paniekkel open is: gebruik stem als dictaat voor het tekstveld
+      if (panicOpenRef.current) {
+        setPanicText(prev => prev ? prev + ' ' + transcript : transcript)
+        setVoiceToast(`🎤 "${transcript}"`)
+        setTimeout(() => setVoiceToast(''), 2000)
+        return
+      }
       setVoiceToast(`🎤 "${transcript}"`)
       setTimeout(() => setVoiceToast(''), 2000)
       const recipe = recipeRef.current as { stappen: unknown[]; naam: string } | null
@@ -834,14 +845,26 @@ export default function KokenPage() {
                     style={{ width: '100%', padding: '12px', paddingRight: 48, borderRadius: 10, border: '1.5px solid #E0E0E0', fontSize: 15, resize: 'none', boxSizing: 'border-box' }} />
                   <button
                     onClick={() => {
+                      if (voiceActive) {
+                        // Spraakbediening actief: gesproken tekst gaat al naar dit veld
+                        setVoiceToast('🎤 Spreek je probleem in...')
+                        setTimeout(() => setVoiceToast(''), 3000)
+                        return
+                      }
                       const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-                      if (!SR) return
-                      const r = new SR(); r.lang = 'nl-NL'; r.interimResults = false
-                      r.onresult = (e: any) => setPanicText(e.results[0][0].transcript)
+                      if (!SR) { setVoiceToast('Spraak niet ondersteund'); setTimeout(() => setVoiceToast(''), 2500); return }
+                      const r = new SR(); r.lang = 'nl-NL'; r.interimResults = false; r.continuous = false
+                      r.onresult = (e: any) => {
+                        const t = e.results[0][0].transcript
+                        setPanicText(prev => prev ? prev + ' ' + t : t)
+                      }
+                      r.onerror = () => { setVoiceToast('Kon niet luisteren, probeer opnieuw'); setTimeout(() => setVoiceToast(''), 2500) }
                       r.start()
+                      setVoiceToast('🎤 Luisteren...')
+                      setTimeout(() => setVoiceToast(''), 4000)
                     }}
-                    title="Spreek je probleem in"
-                    style={{ position: 'absolute', top: 8, right: 8, background: voiceActive ? '#E8F5E9' : '#F3F3F3', border: 'none', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    title={voiceActive ? 'Spraak actief: spreek gewoon' : 'Spreek je probleem in'}
+                    style={{ position: 'absolute', top: 8, right: 8, background: voiceActive ? '#E8F5E9' : '#F3F3F3', border: voiceActive ? '2px solid #2D6A4F' : 'none', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     🎤
                   </button>
                 </div>
