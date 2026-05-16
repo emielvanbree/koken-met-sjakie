@@ -828,9 +828,23 @@ export default function KokenPage() {
             {!panicAdvice ? (
               <>
                 <p style={{ color: '#666', marginBottom: 12 }}>Wat gaat er mis? Beschrijf het probleem:</p>
-                <textarea value={panicText} onChange={e => setPanicText(e.target.value)} rows={3}
-                  placeholder="bijv. Mijn saus is te zout en te dik geworden"
-                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid #E0E0E0', fontSize: 15, resize: 'none', boxSizing: 'border-box', marginBottom: 12 }} />
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <textarea value={panicText} onChange={e => setPanicText(e.target.value)} rows={3}
+                    placeholder="bijv. Mijn saus is te zout en te dik geworden"
+                    style={{ width: '100%', padding: '12px', paddingRight: 48, borderRadius: 10, border: '1.5px solid #E0E0E0', fontSize: 15, resize: 'none', boxSizing: 'border-box' }} />
+                  <button
+                    onClick={() => {
+                      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+                      if (!SR) return
+                      const r = new SR(); r.lang = 'nl-NL'; r.interimResults = false
+                      r.onresult = (e: any) => setPanicText(e.results[0][0].transcript)
+                      r.start()
+                    }}
+                    title="Spreek je probleem in"
+                    style={{ position: 'absolute', top: 8, right: 8, background: voiceActive ? '#E8F5E9' : '#F3F3F3', border: 'none', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    🎤
+                  </button>
+                </div>
                 <button className="btn-primary" onClick={handlePanic} disabled={panicLoading || !panicText.trim()}>
                   {panicLoading ? '⏳ Redding halen...' : '🚨 Help me!'}
                 </button>
@@ -947,7 +961,9 @@ export default function KokenPage() {
       {/* Badge celebration */}
       {savedBadges.length > 0 && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 24, padding: '32px 24px', maxWidth: 360, width: '100%', textAlign: 'center' }}>
+          <div style={{ background: 'white', borderRadius: 24, padding: '32px 24px', maxWidth: 360, width: '100%', textAlign: 'center', position: 'relative' }}>
+            <button onClick={() => setSavedBadges([])}
+              style={{ position: 'absolute', top: 16, right: 16, background: '#F3F3F3', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 18, lineHeight: '32px' }}>✕</button>
             <div style={{ fontSize: 64, marginBottom: 8 }}>🏆</div>
             <h2 style={{ fontWeight: 800, fontSize: 22, color: 'var(--kms-dark)', marginBottom: 8 }}>
               {leveledUp ? '🎉 Level up!' : 'Nieuwe badge(s)!'}
@@ -961,9 +977,14 @@ export default function KokenPage() {
                 </div>
               ))}
             </div>
-            <button className="btn-primary" onClick={() => router.push('/dagboek')}>
-              Naar mijn dagboek →
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setSavedBadges([])}>
+                Later bekijken
+              </button>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={() => router.push('/dagboek')}>
+                Naar dagboek →
+              </button>
+            </div>
           </div>
         </div>
       )}
