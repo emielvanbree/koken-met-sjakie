@@ -35,10 +35,10 @@ const SESSION_KEY = 'kms-cook-session'
 interface CookSession {
   recipe: unknown
   currentStep: number
-  timers: { id: string; componentNaam: string; resterendSeconden: number; duurSeconden: number; savedAt: number }[]
+  timers: { id: string; componentNaam: string; resterendSeconden: number; duurSeconden: number; type: string; savedAt: number }[]
 }
 
-function saveSession(recipe: unknown, step: number, timers: { id: string; componentNaam: string; resterendSeconden: number; duurSeconden: number }[]) {
+function saveSession(recipe: unknown, step: number, timers: { id: string; componentNaam: string; resterendSeconden: number; duurSeconden: number; type: string }[]) {
   try {
     const session: CookSession = {
       recipe,
@@ -248,6 +248,7 @@ export default function KokenPage() {
             componentNaam: t.componentNaam,
             duurSeconden: t.duurSeconden,
             resterendSeconden: Math.max(0, resterend),
+            type: t.type as Timer['type'],
             actief: resterend > 0,
             voltooid: resterend <= 0,
           }
