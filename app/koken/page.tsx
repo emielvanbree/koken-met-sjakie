@@ -814,8 +814,6 @@ export default function KokenPage() {
             {voiceActive && <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, background: '#2D6A4F', borderRadius: '50%' }} />}
           </button>
         </div>
-      </div>
-
       </div>}
 
       {/* Panic Modal */}
