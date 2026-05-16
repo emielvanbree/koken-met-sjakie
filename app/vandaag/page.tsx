@@ -144,7 +144,7 @@ export default function VandaagPage() {
     if (!selected || !recipe) return
 
     if (missingIngredients.length === 0 && extraIngredients.length === 0) {
-      localStorage.setItem('kms-active-recipe', JSON.stringify(recipe))
+      localStorage.removeItem('kms-cook-session'); localStorage.setItem('kms-active-recipe', JSON.stringify(recipe))
       router.push('/koken')
       return
     }
@@ -159,7 +159,7 @@ export default function VandaagPage() {
         })
         const data = await res.json()
         if (!res.ok) { setError(data.error || 'Recept aanpassen mislukt'); setStep('ingredients'); return }
-        localStorage.setItem('kms-active-recipe', JSON.stringify(data.recipe))
+        localStorage.removeItem('kms-cook-session'); localStorage.setItem('kms-active-recipe', JSON.stringify(data.recipe))
         router.push('/koken')
       } catch { setError('Verbindingsfout.'); setStep('ingredients') }
       return
@@ -209,7 +209,7 @@ export default function VandaagPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Recept aanpassen mislukt'); setStep('substitutes'); return }
-      localStorage.setItem('kms-active-recipe', JSON.stringify(data.recipe))
+      localStorage.removeItem('kms-cook-session'); localStorage.setItem('kms-active-recipe', JSON.stringify(data.recipe))
       router.push('/koken')
     } catch (e) {
       console.error('startCooking fout:', e)

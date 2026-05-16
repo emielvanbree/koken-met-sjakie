@@ -232,6 +232,12 @@ export default function KokenPage() {
     if (!raw) return
     try {
       const session: CookSession = JSON.parse(raw)
+      // Controleer of de sessie bij het huidige recept hoort
+      const sessionRecipe = session.recipe as { naam?: string } | null
+      if (!sessionRecipe || sessionRecipe.naam !== recipe.naam) {
+        clearSession()
+        return
+      }
       const now = Date.now()
       // Herstel stap
       if (session.currentStep > 0) {
