@@ -73,6 +73,8 @@ export default function KokenPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [savedBadges, setSavedBadges] = useState<{name:string,emoji:string}[]>([])
+  const [shareToast, setShareToast] = useState('')
+  const [voiceToast, setVoiceToast] = useState('')
   const [leveledUp, setLeveledUp] = useState(false)
   const [voiceActive, setVoiceActive] = useState(false)
   const [usedPanic, setUsedPanic] = useState(false)
@@ -358,6 +360,52 @@ export default function KokenPage() {
     speak(`Stap ${step.stap_nummer}: ${step.instructie}`)
   }
 
+  async function awardBadge(badgeId: string) {
+    try {
+      const res = await fetch('/api/gamification/award', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ badgeId }),
+      })
+      const data = await res.json()
+      if (data.newBadge) setSavedBadges(prev => [...prev, data.newBadge])
+    } catch { /* stil */ }
+  }
+
+  function shareIngredients() {
+    if (!recipe) return
+    const lines = (recipe.ingredienten || []).map((i: {hoeveelheid: number; eenheid: string; naam: string}) =>
+      `${i.hoeveelheid > 0 ? `${i.hoeveelheid} ${i.eenheid} ` : ''}${i.naam}`
+    )
+    const text = `🛒 Boodschappenlijst voor ${recipe.naam}\n\n${lines.map(l => `• ${l}`).join('\n')}`
+    if (navigator.share) {
+      navigator.share({ title: `Boodschappenlijst: ${recipe.naam}`, text })
+    } else {
+      navigator.clipboard.writeText(text)
+      setShareToast('📋 Gekopieerd!')
+      setTimeout(() => setShareToast(''), 2500)
+    }
+    awardBadge('sociaal_kok')
+  }
+
+  function shareRecipe() {
+    if (!recipe) return
+    const stappen = (recipe.stappen || []).map((s: {stap_nummer: number; instructie: string}) =>
+      `Stap ${s.stap_nummer}: ${s.instructie}`
+    )
+    const ingredienten = (recipe.ingredienten || []).map((i: {hoeveelheid: number; eenheid: string; naam: string}) =>
+      `• ${i.hoeveelheid > 0 ? `${i.hoeveelheid} ${i.eenheid} ` : ''}${i.naam}`
+    )
+    const text = `👨‍🍳 ${recipe.naam}\n\n🛒 Ingrediënten:\n${ingredienten.join('\n')}\n\n📋 Bereiding:\n${stappen.join('\n')}`
+    if (navigator.share) {
+      navigator.share({ title: recipe.naam, text })
+    } else {
+      navigator.clipboard.writeText(text)
+      setShareToast('📋 Recept gekopieerd!')
+      setTimeout(() => setShareToast(''), 2500)
+    }
+    awardBadge('recept_deler')
+  }
+
   function handleKlaar() {
     if (!recipe) return
     const step = recipe.stappen[currentStep]
@@ -402,6 +450,61 @@ export default function KokenPage() {
     setConfirmLastStepOpen(false)
     clearSession()
     setRatingOpen(true)
+  }
+
+  function startVoiceRecognition() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) { setVoiceToast('Spraak niet ondersteund op dit apparaat'); setTimeout(() => setVoiceToast(''), 3000); return }
+    const recognition = new SR()
+    recognition.lang = 'nl-NL'
+    recognition.continuous = true
+    recognition.interimResults = false
+    recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } }; length: number } }) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim()
+      setVoiceToast(`🎤 "${transcript}"`)
+      setTimeout(() => setVoiceToast(''), 2000)
+      const recipe = recipeRef.current as { stappen: unknown[]; naam: string } | null
+      const step = currentStepRef.current
+      const totalSteps = recipe?.stappen?.length ?? 0
+
+      if (transcript.includes('volgende') || transcript.includes('verder')) {
+        if (step < totalSteps - 1) goToStep(step + 1)
+      } else if (transcript.includes('vorige') || transcript.includes('terug')) {
+        if (step > 0) goToStep(step - 1)
+      } else if (transcript.includes('herhaal') || transcript.includes('opnieuw') || transcript.includes('nogmaals')) {
+        const currentRecipe = recipeRef.current as { stappen: { instructie: string; stap_nummer: number }[] } | null
+        if (currentRecipe) speak(currentRecipe.stappen[step].instructie)
+      } else if (transcript.includes('klaar') || transcript.includes('voltooid') || transcript.includes('gedaan')) {
+        handleKlaar()
+      } else if (transcript.includes('stop') || transcript.includes('uit') || transcript.includes('microf')) {
+        stopVoiceRecognition()
+      } else if (transcript.includes('paniek') || transcript.includes('help')) {
+        setPanicOpen(true)
+      }
+    }
+    recognition.onerror = () => { setVoiceActive(false); recognitionRef.current = null }
+    recognition.onend = () => {
+      // Herstart automatisch als nog actief
+      if (recognitionRef.current) recognition.start()
+    }
+    recognition.start()
+    recognitionRef.current = recognition
+    setVoiceActive(true)
+  }
+
+  function stopVoiceRecognition() {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null
+      recognitionRef.current.stop()
+      recognitionRef.current = null
+    }
+    setVoiceActive(false)
+  }
+
+  function toggleVoice() {
+    if (voiceActive) stopVoiceRecognition()
+    else startVoiceRecognition()
   }
 
   async function loadTechnique(term: string) {
@@ -631,6 +734,16 @@ export default function KokenPage() {
                   </div>
                 ))}
               </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button onClick={shareIngredients}
+                  style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#E8F5E9', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#2D6A4F' }}>
+                  🛒 Deel boodschappenlijst
+                </button>
+                <button onClick={shareRecipe}
+                  style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#F0F4FF', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#4361EE' }}>
+                  📖 Deel recept
+                </button>
+              </div>
             </div>
           ) : step.ingredienten_deze_stap?.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -668,6 +781,12 @@ export default function KokenPage() {
           <button style={{ flex: 1, padding: '12px', borderRadius: 12, background: '#F3F3F3', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, color: '#666' }}
             onClick={() => speak(step.instructie)}>
             🔊 Herhaal
+          </button>
+          <button onClick={toggleVoice}
+            style={{ padding: '12px 14px', borderRadius: 12, background: voiceActive ? '#E8F5E9' : '#F3F3F3', border: voiceActive ? '2px solid #2D6A4F' : '2px solid transparent', cursor: 'pointer', fontSize: 18, position: 'relative' }}
+            title={voiceActive ? 'Spraak uitschakelen' : 'Spraakbediening inschakelen'}>
+            {voiceActive ? '🎙️' : '🎤'}
+            {voiceActive && <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, background: '#2D6A4F', borderRadius: '50%' }} />}
           </button>
         </div>
       </div>
@@ -835,6 +954,18 @@ export default function KokenPage() {
               Naar mijn dagboek →
             </button>
           </div>
+        </div>
+      )}
+
+      {shareToast && (
+        <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: '#2D6A4F', color: 'white', padding: '12px 20px', borderRadius: 24, fontWeight: 700, fontSize: 14, zIndex: 300, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+          {shareToast}
+        </div>
+      )}
+
+      {voiceToast && (
+        <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: '#1a1a2e', color: 'white', padding: '10px 18px', borderRadius: 24, fontWeight: 600, fontSize: 13, zIndex: 300, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+          {voiceToast}
         </div>
       )}
 

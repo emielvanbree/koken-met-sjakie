@@ -14,6 +14,8 @@ export const BADGES = [
   { id: 'sterrenkok_beeld', name: 'Sterrenkok in beeld',    emoji: '📸',  desc: 'Eerste foto geüpload van je gerecht' },
   { id: 'food_paparazzi',   name: 'Food Paparazzi',         emoji: '🎞️',  desc: '5 foto\'s geüpload' },
   { id: 'masterchef_geheugen', name: 'Masterchef Geheugen', emoji: '🌟',  desc: '10 dagboek-entries met foto én beoordeling' },
+  { id: 'sociaal_kok',       name: 'Sociaal Kok',           emoji: '🤝',  desc: 'Eerste keer een boodschappenlijst gedeeld' },
+  { id: 'recept_deler',      name: 'Recept Deler',          emoji: '📖',  desc: 'Eerste keer een recept gedeeld' },
 ]
 
 export const LEVELS = [
@@ -56,6 +58,8 @@ export interface BadgeCheckInput {
   ratingFives: number
   photoWithRatingCount: number
   earnedBadges: string[]
+  sharesCount?: number
+  recipeSharesCount?: number
 }
 
 export function checkNewBadges(input: BadgeCheckInput): string[] {
@@ -81,6 +85,8 @@ export function checkNewBadges(input: BadgeCheckInput): string[] {
   check('sterrenkok_beeld',    input.photoCount >= 1)
   check('food_paparazzi',      input.photoCount >= 5)
   check('masterchef_geheugen', input.photoWithRatingCount >= 10)
+  check('sociaal_kok',       (input.sharesCount ?? 0) >= 1)
+  check('recept_deler',      (input.recipeSharesCount ?? 0) >= 1)
 
   return newBadges
 }
