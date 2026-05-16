@@ -102,6 +102,9 @@ export default function KokenPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
   const panicOpenRef = useRef(false)
+  const panicAutoSubmitRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handlePanicRef = useRef<() => void>(() => {})
 
   // Sync panicOpenRef zodat voice recognition er gebruik van kan maken
   useEffect(() => { panicOpenRef.current = panicOpen }, [panicOpen])
@@ -467,8 +470,13 @@ export default function KokenPage() {
       // Als paniekkel open is: gebruik stem als dictaat voor het tekstveld
       if (panicOpenRef.current) {
         setPanicText(prev => prev ? prev + ' ' + transcript : transcript)
-        setVoiceToast(`🎤 "${transcript}"`)
-        setTimeout(() => setVoiceToast(''), 2000)
+        setVoiceToast(`🎤 "${transcript}" — even wachten...`)
+        setTimeout(() => setVoiceToast(''), 2500)
+        // Auto-submit na 2s stilte
+        if (panicAutoSubmitRef.current) clearTimeout(panicAutoSubmitRef.current)
+        panicAutoSubmitRef.current = setTimeout(() => {
+          if (panicOpenRef.current) handlePanicRef.current()
+        }, 2000)
         return
       }
       setVoiceToast(`🎤 "${transcript}"`)
@@ -543,6 +551,8 @@ export default function KokenPage() {
     setPanicAdvice(data.advice || 'Geen advies beschikbaar')
     setPanicLoading(false)
   }
+  // Altijd de meest recente handlePanic in de ref bewaren voor auto-submit vanuit spraak
+  handlePanicRef.current = handlePanic
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -857,6 +867,8 @@ export default function KokenPage() {
                       r.onresult = (e: any) => {
                         const t = e.results[0][0].transcript
                         setPanicText(prev => prev ? prev + ' ' + t : t)
+                        setVoiceToast('🎤 Versturen...')
+                        setTimeout(() => { setVoiceToast(''); handlePanicRef.current() }, 1500)
                       }
                       r.onerror = () => { setVoiceToast('Kon niet luisteren, probeer opnieuw'); setTimeout(() => setVoiceToast(''), 2500) }
                       r.start()
