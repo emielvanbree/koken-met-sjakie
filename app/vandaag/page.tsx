@@ -63,7 +63,16 @@ export default function VandaagPage() {
 
   const STORAGE_KEY = 'kms-saved-recipes'
 
+  // Terugkeren naar actieve kooksessie bij heropenen app
   useEffect(() => {
+    try {
+      const activeRecipe = localStorage.getItem('kms-active-recipe')
+      const cookSession = localStorage.getItem('kms-cook-session')
+      if (activeRecipe && cookSession) {
+        router.replace('/koken')
+        return
+      }
+    } catch { /* stil */ }
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) setMyRecipes(JSON.parse(raw))
