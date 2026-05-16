@@ -9,7 +9,7 @@ const CUISINE_EMOJI: Record<string, string> = {
   'Overig': '🍽️', 'Mediterraan': '🫐',
 }
 
-const MOOD_OPTIONS = ['Geen voorkeur', 'Lekker simpel', 'Iets nieuws proberen', 'Indruk maken', 'Comfortfood', 'Licht & gezond', 'Seizoensgerecht']
+const MOOD_OPTIONS = ['Lekker simpel', 'Indruk maken', 'Comfortfood', 'Licht & gezond', 'Seizoensgerecht', 'Vegetarisch', 'Veganistisch']
 const TIME_OPTIONS = ['< 20 min', '20-45 min', '45-90 min', '> 90 min']
 const PERSONS_OPTIONS = ['Voor mezelf', 'Voor twee', 'Voor een gezin', '4 of meer']
 const CUISINE_OPTIONS = ['Geen voorkeur', 'Italiaans', 'Aziatisch', 'Mexicaans', 'Nederlands', 'Indiaas', 'Mediterraan', 'Japans']
