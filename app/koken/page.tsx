@@ -77,6 +77,7 @@ export default function KokenPage() {
   const [voiceToast, setVoiceToast] = useState('')
   const [leveledUp, setLeveledUp] = useState(false)
   const [voiceActive, setVoiceActive] = useState(false)
+  const [cookingStarted, setCookingStarted] = useState(false)
   const [usedPanic, setUsedPanic] = useState(false)
   const [startTime] = useState(Date.now())
   const [voiceModalOpen, setVoiceModalOpen] = useState(false)
@@ -190,11 +191,7 @@ export default function KokenPage() {
         const recipeMetVerzamel = { ...parsed, stappen: [ingredientStep, ...hergenummerd] }
         setRecipe(recipeMetVerzamel)
         recipeRef.current = recipeMetVerzamel
-        // Alleen stap 1 uitspreken als er geen actieve sessie is om naar terug te keren
-        const hasSession = !!localStorage.getItem('kms-cook-session')
-        if (!hasSession) {
-          setTimeout(() => speak(`Stap 1: Verzamel alle ingredienten voor ${parsed.naam}.`), 800)
-        }
+        // Spreken gebeurt wanneer de gebruiker 'Aan de slag!' klikt
       } catch {}
     }
     const loadVoices = () => {
@@ -244,6 +241,7 @@ export default function KokenPage() {
         clearSession()
         return
       }
+      setCookingStarted(true)
       const now = Date.now()
       // Herstel stap
       if (session.currentStep > 0) {
@@ -619,7 +617,7 @@ export default function KokenPage() {
         <div style={{ background: 'rgba(255,255,255,0.3)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
           <div style={{ width: `${progress}%`, height: '100%', background: 'white', transition: 'width 0.3s', borderRadius: 4 }} />
         </div>
-        <p style={{ fontSize: 12, opacity: 0.85, margin: '4px 0 0' }}>Stap {currentStep + 1} van {recipe.stappen.length}</p>
+        <p style={{ fontSize: 12, opacity: 0.85, margin: '4px 0 0' }}>{cookingStarted ? `Stap ${currentStep + 1} van ${recipe.stappen.length}` : '🥗 Ingrediënten'}</p>
       </div>
 
       {/* Active Timers */}
@@ -707,8 +705,44 @@ export default function KokenPage() {
         </div>
       )}
 
+      {/* Ingrediënten-overzicht: scherm voor stap 1 */}
+      {!cookingStarted && (
+        <div style={{ padding: 16 }}>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h2 style={{ fontWeight: 800, fontSize: 18, color: 'var(--kms-dark)', marginBottom: 4 }}>🥗 Ingrediënten</h2>
+            <p style={{ fontSize: 13, color: '#888', margin: '0 0 14px' }}>Leg alles klaar voordat je begint.</p>
+            {recipe.ingredienten?.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 16 }}>
+                {recipe.ingredienten.map((ing: {naam: string; hoeveelheid: number; eenheid: string; is_substituut?: boolean}) => (
+                  <div key={ing.naam} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 8, background: ing.is_substituut ? '#FFF3E0' : '#F8F8F8' }}>
+                    <span style={{ fontSize: 14 }}>{ing.is_substituut ? '↩' : '🥘'}</span>
+                    <span style={{ fontSize: 13, color: 'var(--kms-dark)', fontWeight: 500 }}>
+                      {ing.hoeveelheid > 0 ? <strong>{ing.hoeveelheid} {ing.eenheid}</strong> : null} {ing.naam}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 0 }}>
+              <button onClick={shareIngredients}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#E8F5E9', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#2D6A4F' }}>
+                🛒 Deel boodschappenlijst
+              </button>
+              <button onClick={shareRecipe}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#F0F4FF', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#4361EE' }}>
+                📖 Deel recept
+              </button>
+            </div>
+          </div>
+          <button className="btn-primary" onClick={() => { setCookingStarted(true); setTimeout(() => speak(recipe!.stappen[0].instructie), 400) }}
+            style={{ fontSize: 18, padding: '16px', width: '100%' }}>
+            👨‍🍳 Aan de slag! →
+          </button>
+        </div>
+      )}
+
       {/* Step */}
-      <div style={{ padding: '16px' }}>
+      {cookingStarted && <div style={{ padding: '16px' }}>
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
             <span style={{ background: 'var(--kms-orange)', color: 'white', borderRadius: 20, padding: '4px 12px', fontWeight: 700, fontSize: 13 }}>Stap {step.stap_nummer}</span>
@@ -734,16 +768,7 @@ export default function KokenPage() {
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                <button onClick={shareIngredients}
-                  style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#E8F5E9', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#2D6A4F' }}>
-                  🛒 Deel boodschappenlijst
-                </button>
-                <button onClick={shareRecipe}
-                  style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#F0F4FF', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#4361EE' }}>
-                  📖 Deel recept
-                </button>
-              </div>
+
             </div>
           ) : step.ingredienten_deze_stap?.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -790,6 +815,8 @@ export default function KokenPage() {
           </button>
         </div>
       </div>
+
+      </div>}
 
       {/* Panic Modal */}
       {panicOpen && (
