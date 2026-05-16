@@ -30,6 +30,29 @@ function playBeep() {
   } catch { /* AudioContext niet beschikbaar */ }
 }
 
+const SESSION_KEY = 'kms-cook-session'
+
+interface CookSession {
+  recipe: unknown
+  currentStep: number
+  timers: { id: string; componentNaam: string; resterendSeconden: number; duurSeconden: number; savedAt: number }[]
+}
+
+function saveSession(recipe: unknown, step: number, timers: { id: string; componentNaam: string; resterendSeconden: number; duurSeconden: number }[]) {
+  try {
+    const session: CookSession = {
+      recipe,
+      currentStep: step,
+      timers: timers.map(t => ({ ...t, savedAt: Date.now() })),
+    }
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  } catch { /* stil */ }
+}
+
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY) } catch { /* stil */ }
+}
+
 export default function KokenPage() {
   const router = useRouter()
   const [recipe, setRecipe] = useState<Recipe | null>(null)
@@ -69,6 +92,10 @@ export default function KokenPage() {
   const alarmIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
 
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const sessionSaveTickRef = useRef(0)
+  const recipeRef = useRef<unknown>(null)
+  const currentStepRef = useRef(0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
 
@@ -106,6 +133,7 @@ export default function KokenPage() {
     setTimers(prev => prev.filter(t => t.id !== id))
     if (id === lastStepTimerIdRef.current) {
       lastStepTimerIdRef.current = null
+      clearSession()
       setTimeout(() => setRatingOpen(true), 300)
     }
   }
@@ -159,6 +187,7 @@ export default function KokenPage() {
         }))
         const recipeMetVerzamel = { ...parsed, stappen: [ingredientStep, ...hergenummerd] }
         setRecipe(recipeMetVerzamel)
+        recipeRef.current = recipeMetVerzamel
         setTimeout(() => speak(`Stap 1: Verzamel alle ingredienten voor ${parsed.naam}.`), 800)
       } catch {}
     }
@@ -177,6 +206,65 @@ export default function KokenPage() {
     }
   }, [])
 
+  // Wake Lock: houd scherm wakker tijdens koken
+  useEffect(() => {
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return
+      try {
+        wakeLockRef.current = await (navigator as unknown as { wakeLock: { request: (t: string) => Promise<WakeLockSentinel> } }).wakeLock.request('screen')
+      } catch { /* Wake Lock niet beschikbaar */ }
+    }
+    requestWakeLock()
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') requestWakeLock()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      wakeLockRef.current?.release().catch(() => {})
+    }
+  }, [])
+
+  // Sessie herstellen bij terugkeren na afsluiten
+  useEffect(() => {
+    if (!recipe) return // Wacht tot recept geladen is
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return
+    try {
+      const session: CookSession = JSON.parse(raw)
+      const now = Date.now()
+      // Herstel stap
+      if (session.currentStep > 0) {
+        currentStepRef.current = session.currentStep
+        setCurrentStep(session.currentStep)
+      }
+      // Herstel timers met elapsed time verrekend
+      if (session.timers && session.timers.length > 0) {
+        const restored = session.timers.map(t => {
+          const elapsed = Math.floor((now - t.savedAt) / 1000)
+          const resterend = t.resterendSeconden - elapsed
+          return {
+            id: t.id,
+            componentNaam: t.componentNaam,
+            duurSeconden: t.duurSeconden,
+            resterendSeconden: Math.max(0, resterend),
+            actief: resterend > 0,
+            voltooid: resterend <= 0,
+          }
+        })
+        setTimers(restored)
+        // Timers die afliepen terwijl app dicht was → meteen alarm
+        restored.filter(t => t.voltooid).forEach(t => {
+          setTimeout(() => startAlarmRef.current(t.id), 500)
+        })
+      }
+    } catch { /* stil */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe])
+
+  // Houd recipeRef actueel
+  useEffect(() => { recipeRef.current = recipe }, [recipe])
+
   // Timer tick
   useEffect(() => {
     timerIntervalRef.current = setInterval(() => {
@@ -193,6 +281,11 @@ export default function KokenPage() {
           return { ...t, resterendSeconden: remaining }
         })
         if (completedId) startAlarmRef.current(completedId)
+        // Sessie elke 5 seconden opslaan
+        sessionSaveTickRef.current += 1
+        if (sessionSaveTickRef.current % 5 === 0) {
+          saveSession(recipeRef.current, currentStepRef.current, updated.filter(t => t.actief && !t.voltooid))
+        }
         return updated
       })
     }, 1000)
@@ -248,6 +341,7 @@ export default function KokenPage() {
 
   function goToStep(idx: number) {
     if (!recipe) return
+    currentStepRef.current = idx
     setCurrentStep(idx)
     const step = recipe.stappen[idx]
     speak(`Stap ${step.stap_nummer}: ${step.instructie}`)
@@ -282,6 +376,7 @@ export default function KokenPage() {
   function handleFinishNow() {
     setWaitingForLastStepTimer(false)
     lastStepTimerIdRef.current = null
+    clearSession()
     setRatingOpen(true)
   }
 
@@ -294,6 +389,7 @@ export default function KokenPage() {
     setWaitingForLastStepTimer(false)
     lastStepTimerIdRef.current = null
     setConfirmLastStepOpen(false)
+    clearSession()
     setRatingOpen(true)
   }
 
