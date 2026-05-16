@@ -49,7 +49,7 @@ export async function getSessionFromRequest(req: NextRequest): Promise<SessionUs
 
 export function setSessionCookie(token: string): Record<string, string> {
   return {
-    'Set-Cookie': `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${60 * 60 * 24 * 30}`,
+    'Set-Cookie': `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${60 * 60 * 24 * 30}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`,
   }
 }
 

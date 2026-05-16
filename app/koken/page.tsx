@@ -166,7 +166,7 @@ export default function KokenPage() {
   }
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('kms-active-recipe')
+    const stored = localStorage.getItem('kms-active-recipe')
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
@@ -457,7 +457,7 @@ export default function KokenPage() {
       if (res.ok) {
         if (data.newBadges?.length) setSavedBadges(data.newBadges)
         if (data.leveledUp) setLeveledUp(true)
-        sessionStorage.removeItem('kms-active-recipe')
+        localStorage.removeItem('kms-active-recipe')
         if (!data.newBadges?.length && !data.leveledUp) router.push('/dagboek')
       } else {
         setSaveError(res.status === 401
@@ -738,7 +738,7 @@ export default function KokenPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
           <div style={{ background: 'white', width: '100%', borderRadius: '20px 20px 0 0', padding: '24px 20px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-              <button onClick={() => { setRatingOpen(false); sessionStorage.removeItem('kms-active-recipe'); router.push('/vandaag') }}
+              <button onClick={() => { setRatingOpen(false); localStorage.removeItem('kms-active-recipe'); router.push('/vandaag') }}
                 style={{ background: '#F3F3F3', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 ✕
               </button>
